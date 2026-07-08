@@ -1,8 +1,12 @@
 import requests
 from datetime import datetime, timedelta
+import json
+import os
 
 SOURCE_URL = "https://ics.fixtur.es/v2/aberdeen.ics"
 OUTPUT_FILE = "aberdeen_fc_ops_calendar.ics"
+SCORES_FILE = "match_scores.json"
+SCORES_API_URL = "https://api.football-data.org/v4/competitions/PL/matches"  # Example API - adjust as needed
 
 def classify(summary, location):
     summary_lower = summary.lower()
@@ -52,6 +56,51 @@ def is_within_12_months(dtstart_string):
     return now <= event_date <= twelve_months_later
 
 
+def load_scores():
+    """Load match scores from local cache"""
+    if os.path.exists(SCORES_FILE):
+        try:
+            with open(SCORES_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def save_scores(scores):
+    """Save match scores to local cache"""
+    with open(SCORES_FILE, "w") as f:
+        json.dump(scores, f, indent=2)
+
+
+def get_score_for_match(summary, dtstart_string):
+    """
+    Check if match has concluded and retrieve score.
+    Returns updated summary with score if available, otherwise returns original.
+    """
+    event_date = parse_datetime(dtstart_string)
+    if not event_date:
+        return summary
+    
+    now = datetime.utcnow()
+    
+    # Only check for scores if match has already concluded
+    if event_date > now:
+        return summary
+    
+    scores = load_scores()
+    
+    # Create a match key from summary and date
+    match_key = f"{summary}_{event_date.strftime('%Y-%m-%d')}"
+    
+    # Check if we have a cached score
+    if match_key in scores:
+        score = scores[match_key]
+        return f"{summary} - Final: {score}"
+    
+    return summary
+
+
 def build_calendar(events):
     now = datetime.utcnow()
     twelve_months_later = now + timedelta(days=365)
@@ -80,6 +129,18 @@ def build_calendar(events):
     return "\n".join(cal)
 
 
+def add_score(summary, date_str, score):
+    """
+    Manually add or update a match score.
+    Usage: add_score("[H] Aberdeen vs Hearts", "2026-08-01", "2-1 Aberdeen")
+    """
+    scores = load_scores()
+    match_key = f"{summary}_{date_str}"
+    scores[match_key] = score
+    save_scores(scores)
+    print(f"Score added for {match_key}: {score}")
+
+
 def main():
     response = requests.get(SOURCE_URL)
     text = response.text
@@ -98,6 +159,9 @@ def main():
             # Filter: only include events within the next 12 months
             if dtstart and is_within_12_months(dtstart):
                 new_summary = classify(raw_summary, location)
+                
+                # Check for scores if match has concluded
+                new_summary = get_score_for_match(new_summary, dtstart)
 
                 events.append({
                     "uid": block.get("UID", raw_summary.replace(" ", "")),

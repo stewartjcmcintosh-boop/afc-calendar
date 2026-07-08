@@ -32,6 +32,26 @@ def classify(summary, location):
         return f"[{ha}] {formatted}"
 
 
+def parse_datetime(dt_string):
+    """Parse iCalendar datetime string (YYYYMMDDTHHMMSSZ) to datetime object"""
+    try:
+        return datetime.strptime(dt_string, "%Y%m%dT%H%M%SZ")
+    except (ValueError, TypeError):
+        return None
+
+
+def is_within_12_months(dtstart_string):
+    """Check if event is within the next 12 months from today"""
+    event_date = parse_datetime(dtstart_string)
+    if not event_date:
+        return False
+    
+    now = datetime.utcnow()
+    twelve_months_later = now + timedelta(days=365)
+    
+    return now <= event_date <= twelve_months_later
+
+
 def build_calendar(events):
     cal = [
         "BEGIN:VCALENDAR",
@@ -68,16 +88,19 @@ def main():
         elif line == "END:VEVENT":
             raw_summary = block.get("SUMMARY", "Aberdeen Fixture")
             location = block.get("LOCATION", "")
+            dtstart = block.get("DTSTART")
+            
+            # Filter: only include events within the next 12 months
+            if dtstart and is_within_12_months(dtstart):
+                new_summary = classify(raw_summary, location)
 
-            new_summary = classify(raw_summary, location)
-
-            events.append({
-                "uid": block.get("UID", raw_summary.replace(" ", "")),
-                "summary": new_summary,
-                "dtstart": block.get("DTSTART"),
-                "dtend": block.get("DTEND"),
-                "location": location
-            })
+                events.append({
+                    "uid": block.get("UID", raw_summary.replace(" ", "")),
+                    "summary": new_summary,
+                    "dtstart": dtstart,
+                    "dtend": block.get("DTEND"),
+                    "location": location
+                })
         else:
             if ":" in line:
                 key, val = line.split(":", 1)
@@ -87,6 +110,8 @@ def main():
 
     with open(OUTPUT_FILE, "w") as f:
         f.write(calendar)
+    
+    print(f"Calendar updated with {len(events)} events in the next 12 months")
 
 
 if __name__ == "__main__":

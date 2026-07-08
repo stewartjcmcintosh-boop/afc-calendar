@@ -53,11 +53,15 @@ def is_within_12_months(dtstart_string):
 
 
 def build_calendar(events):
+    now = datetime.utcnow()
+    twelve_months_later = now + timedelta(days=365)
+    
     cal = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
         "PRODID:-//AFC Ops Calendar//EN",
-        "X-WR-CALNAME:Aberdeen FC Fixtures (Ops View)"
+        "X-WR-CALNAME:Aberdeen FC Fixtures (Ops View)",
+        f"X-WR-CALDESC:Aberdeen FC Fixtures for the next 12 months ({now.strftime('%Y-%m-%d')} to {twelve_months_later.strftime('%Y-%m-%d')})"
     ]
 
     for e in events:
@@ -69,6 +73,7 @@ def build_calendar(events):
         if e.get("dtend"):
             cal.append(f"DTEND:{e['dtend']}")
         cal.append(f"LOCATION:{e['location']}")
+        cal.append("DESCRIPTION:Auto-generated AFC ops calendar")
         cal.append("END:VEVENT")
 
     cal.append("END:VCALENDAR")

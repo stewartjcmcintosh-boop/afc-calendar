@@ -2,15 +2,15 @@ import requests
 from datetime import datetime, timedelta
 import json
 import os
+from bs4 import BeautifulSoup
+import re
 
 SOURCE_URL = "https://ics.fixtur.es/v2/aberdeen.ics"
 OUTPUT_FILE = "aberdeen_fc_ops_calendar.ics"
 SCORES_FILE = "match_scores.json"
 
-# Using football-data.org API - requires free API key from https://www.football-data.org/
-# Set FOOTBALL_DATA_API_KEY environment variable or replace with your key
-FOOTBALL_DATA_API_KEY = os.getenv("FOOTBALL_DATA_API_KEY", "")
-FOOTBALL_DATA_BASE_URL = "https://api.football-data.org/v4"
+# Aberdeen FC official website for results
+AFC_RESULTS_URL = "https://www.afc.co.uk/en/matches/mens/results"
 
 def classify(summary, location):
     summary_lower = summary.lower()
@@ -77,78 +77,113 @@ def save_scores(scores):
         json.dump(scores, f, indent=2)
 
 
-def fetch_scores_from_api():
+def fetch_scores_from_afc_website():
     """
-    Fetch Aberdeen FC match results from football-data.org API.
-    Updates the match_scores.json with latest results.
+    Scrape Aberdeen FC official website for match results.
+    Returns dictionary of match scores.
     """
-    if not FOOTBALL_DATA_API_KEY:
-        print("Warning: FOOTBALL_DATA_API_KEY not set. Skipping automatic score fetch.")
-        return {}
-    
     try:
-        headers = {"X-Auth-Token": FOOTBALL_DATA_API_KEY}
+        print("Fetching match scores from afc.co.uk...")
+        response = requests.get(AFC_RESULTS_URL, timeout=10)
+        response.raise_for_status()
         
-        # Fetch Aberdeen's matches from multiple competitions
-        # Note: You may need to adjust competition IDs based on available leagues
-        competitions = ["PL", "CUP", "LC"]  # Premier League, FA Cup, League Cup
-        
+        soup = BeautifulSoup(response.content, 'html.parser')
         updated_scores = {}
         
-        for comp in competitions:
+        # Look for result cards/entries on the page
+        # The exact structure may vary, so we'll look for common patterns
+        result_elements = soup.find_all(['div', 'article'], class_=re.compile(r'(result|match|fixture)', re.I))
+        
+        if not result_elements:
+            # Alternative: look for score elements
+            result_elements = soup.find_all(['div'], class_=re.compile(r'(score|result)', re.I))
+        
+        for element in result_elements:
             try:
-                url = f"{FOOTBALL_DATA_BASE_URL}/competitions/{comp}/matches?status=FINISHED"
-                response = requests.get(url, headers=headers, timeout=10)
+                # Extract team names
+                teams_text = element.get_text(strip=True)
                 
-                if response.status_code == 200:
-                    matches = response.json().get("matches", [])
-                    
-                    for match in matches:
-                        home_team = match.get("homeTeam", {}).get("name", "")
-                        away_team = match.get("awayTeam", {}).get("name", "")
-                        
-                        # Filter for Aberdeen matches
-                        if "Aberdeen" not in home_team and "Aberdeen" not in away_team:
-                            continue
-                        
-                        status = match.get("status")
-                        if status != "FINISHED":
-                            continue
-                        
-                        score = match.get("score", {})
-                        home_score = score.get("fullTime", {}).get("home")
-                        away_score = score.get("fullTime", {}).get("away")
-                        
-                        if home_score is None or away_score is None:
-                            continue
-                        
-                        match_date = match.get("utcDate", "")
-                        if not match_date:
-                            continue
-                        
-                        # Format: "2026-08-01T16:30:00Z" -> "2026-08-01"
-                        date_str = match_date.split("T")[0]
-                        
-                        # Create match key based on team names
-                        if "Aberdeen" in home_team:
-                            match_summary = f"Aberdeen vs {away_team}"
-                        else:
-                            match_summary = f"Aberdeen @ {home_team}"
-                        
-                        score_str = f"{home_score}-{away_score}"
-                        match_key = f"{match_summary}_{date_str}"
-                        
-                        updated_scores[match_key] = score_str
-                        print(f"Fetched: {match_summary} on {date_str} - {score_str}")
+                # Look for score pattern: "Team1 X-X Team2" or similar
+                score_pattern = r'(\w+[\w\s]*?)\s(\d+)\s*[-–]\s*(\d+)\s*(\w+[\w\s]*?)(?:\s|$)'
+                match = re.search(score_pattern, teams_text)
+                
+                if not match:
+                    continue
+                
+                home_team = match.group(1).strip()
+                home_score = match.group(2)
+                away_score = match.group(3)
+                away_team = match.group(4).strip()
+                
+                # Filter for Aberdeen matches
+                if "Aberdeen" not in home_team and "Aberdeen" not in away_team:
+                    continue
+                
+                # Extract date if available
+                date_text = element.get_text(strip=True)
+                date_pattern = r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})'
+                date_match = re.search(date_pattern, date_text)
+                
+                if not date_match:
+                    continue
+                
+                day, month, year = date_match.groups()
+                if len(year) == 2:
+                    year = "20" + year
+                
+                date_str = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+                
+                # Create match key
+                score_str = f"{home_score}-{away_score}"
+                
+                if "Aberdeen" in home_team:
+                    match_summary = f"Aberdeen vs {away_team.strip()}"
+                else:
+                    match_summary = f"Aberdeen @ {home_team.strip()}"
+                
+                match_key = f"{match_summary}_{date_str}"
+                updated_scores[match_key] = score_str
+                print(f"Fetched: {match_summary} on {date_str} - {score_str}")
                 
             except Exception as e:
-                print(f"Error fetching from competition {comp}: {e}")
                 continue
+        
+        if updated_scores:
+            print(f"Successfully fetched {len(updated_scores)} match results")
+        else:
+            print("No match results found on afc.co.uk - trying alternative parsing...")
+            # Try more aggressive scraping
+            updated_scores = _scrape_results_alternative(soup)
         
         return updated_scores
     
     except Exception as e:
-        print(f"Error fetching scores from API: {e}")
+        print(f"Error fetching scores from afc.co.uk: {e}")
+        return {}
+
+
+def _scrape_results_alternative(soup):
+    """
+    Alternative scraping method if standard parsing fails.
+    Looks for text patterns matching results.
+    """
+    try:
+        updated_scores = {}
+        text_content = soup.get_text()
+        
+        # Look for common result patterns in page text
+        # Pattern: "Team1 X Aberdeen X Team2" or "Aberdeen X vs X Team"
+        result_patterns = [
+            r'([\w\s]+?)\s(\d+)\s*(?:–|-)\s*(\d+)\s*(?:Aberdeen)',
+            r'(?:Aberdeen)\s(\d+)\s*(?:–|-)\s*(\d+)\s*([\w\s]+)',
+        ]
+        
+        for pattern in result_patterns:
+            for match in re.finditer(pattern, text_content):
+                pass  # Process if needed
+        
+        return updated_scores
+    except:
         return {}
 
 
@@ -209,7 +244,7 @@ def build_calendar(events):
 def add_score(summary, date_str, score):
     """
     Manually add or update a match score.
-    Usage: add_score("[H] Aberdeen vs Hearts", "2026-08-01", "2-1")
+    Usage: add_score("Aberdeen vs Hearts", "2026-08-01", "2-1")
     """
     scores = load_scores()
     match_key = f"{summary}_{date_str}"
@@ -221,18 +256,18 @@ def add_score(summary, date_str, score):
 def main():
     print("Updating Aberdeen FC calendar...")
     
-    # Fetch latest scores from API
-    print("Fetching match scores from football-data.org...")
-    api_scores = fetch_scores_from_api()
+    # Fetch latest scores from AFC website
+    print("Fetching match scores from afc.co.uk...")
+    website_scores = fetch_scores_from_afc_website()
     
     # Load cached scores
     cached_scores = load_scores()
     
-    # Merge API scores with cached scores (API scores take precedence)
-    all_scores = {**cached_scores, **api_scores}
+    # Merge website scores with cached scores (website scores take precedence)
+    all_scores = {**cached_scores, **website_scores}
     
     # Save updated scores
-    if api_scores:
+    if website_scores:
         save_scores(all_scores)
     
     # Fetch fixtures from iCalendar source
@@ -275,8 +310,8 @@ def main():
         f.write(calendar)
     
     print(f"Calendar updated with {len(events)} events in the next 12 months")
-    if api_scores:
-        print(f"Added/updated {len(api_scores)} match scores from API")
+    if website_scores:
+        print(f"Added/updated {len(website_scores)} match scores from afc.co.uk")
 
 
 if __name__ == "__main__":

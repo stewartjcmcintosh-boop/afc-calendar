@@ -5,9 +5,18 @@ import os
 from bs4 import BeautifulSoup
 import re
 
+# Primary fixture source
 SOURCE_URL = "https://ics.fixtur.es/v2/aberdeen.ics"
+
+# Alternative fixture sources for comprehensive coverage
+ALTERNATIVE_SOURCES = [
+    "https://www.afc.co.uk/en/matches/mens/fixtures",  # Official AFC website
+    "https://www.spfl.co.uk/",  # Scottish Premier Football League
+]
+
 OUTPUT_FILE = "aberdeen_fc_ops_calendar.ics"
 SCORES_FILE = "match_scores.json"
+FIXTURES_CACHE_FILE = "fixtures_cache.json"
 
 # Aberdeen FC official website for results
 AFC_RESULTS_URL = "https://www.afc.co.uk/en/matches/mens/results"
@@ -78,6 +87,23 @@ def save_scores(scores):
     """Save match scores to local cache"""
     with open(SCORES_FILE, "w") as f:
         json.dump(scores, f, indent=2)
+
+
+def load_fixtures_cache():
+    """Load fixtures from cache"""
+    if os.path.exists(FIXTURES_CACHE_FILE):
+        try:
+            with open(FIXTURES_CACHE_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def save_fixtures_cache(fixtures):
+    """Save fixtures to cache"""
+    with open(FIXTURES_CACHE_FILE, "w") as f:
+        json.dump(fixtures, f, indent=2)
 
 
 def fetch_scores_from_afc_website():
@@ -190,6 +216,112 @@ def _scrape_results_alternative(soup):
         return {}
 
 
+def fetch_from_ics_source(url):
+    """
+    Fetch and parse ICS/iCalendar fixtures from a source URL.
+    Returns list of event dictionaries.
+    """
+    try:
+        print(f"Fetching fixtures from {url}...")
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        
+        events = []
+        block = {}
+        
+        for line in response.text.splitlines():
+            if line == "BEGIN:VEVENT":
+                block = {}
+            elif line == "END:VEVENT":
+                if block.get("DTSTART"):
+                    events.append(block)
+                block = {}
+            else:
+                if ":" in line:
+                    key, val = line.split(":", 1)
+                    block[key] = val
+        
+        print(f"Fetched {len(events)} events from ICS source")
+        return events
+    
+    except Exception as e:
+        print(f"Error fetching from {url}: {e}")
+        return []
+
+
+def fetch_from_afc_website_fixtures():
+    """
+    Scrape Aberdeen FC official fixtures page.
+    Returns list of event dictionaries.
+    """
+    try:
+        print("Fetching fixtures from afc.co.uk...")
+        response = requests.get(ALTERNATIVE_SOURCES[0], timeout=15)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.content, 'html.parser')
+        events = []
+        
+        # Look for fixture elements
+        fixture_elements = soup.find_all(['div', 'tr'], class_=re.compile(r'(fixture|match|game)', re.I))
+        
+        for element in fixture_elements:
+            try:
+                text = element.get_text(strip=True)
+                
+                # Look for date pattern
+                date_pattern = r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})'
+                date_match = re.search(date_pattern, text)
+                
+                if not date_match:
+                    continue
+                
+                day, month, year = date_match.groups()
+                if len(year) == 2:
+                    year = "20" + year
+                
+                # Look for time pattern
+                time_pattern = r'(\d{1,2}):(\d{2})'
+                time_match = re.search(time_pattern, text)
+                
+                if time_match:
+                    hour, minute = time_match.groups()
+                    dtstart = f"{year}{month.zfill(2)}{day.zfill(2)}T{hour.zfill(2)}{minute}00Z"
+                else:
+                    dtstart = f"{year}{month.zfill(2)}{day.zfill(2)}T150000Z"  # Default to 3 PM
+                
+                # Extract opponent
+                opponent_match = re.search(r'(?:vs|v|@)\s+([A-Z][A-Za-z\s]+?)(?:\s|$)', text, re.IGNORECASE)
+                
+                if opponent_match:
+                    opponent = opponent_match.group(1).strip()
+                    
+                    # Determine home/away
+                    if "@" in text.lower():
+                        summary = f"Aberdeen @ {opponent}"
+                        location = "Away"
+                    else:
+                        summary = f"Aberdeen vs {opponent}"
+                        location = "Pittodrie Stadium"
+                    
+                    events.append({
+                        "SUMMARY": summary,
+                        "DTSTART": dtstart,
+                        "LOCATION": location,
+                        "UID": f"{summary.replace(' ', '')}_{dtstart}"
+                    })
+            
+            except Exception as e:
+                continue
+        
+        print(f"Fetched {len(events)} fixtures from AFC website")
+        return events
+    
+    except Exception as e:
+        print(f"Error fetching fixtures from AFC website: {e}")
+        return []
+
+
 def get_score_for_match(summary, dtstart_string, scores_cache):
     """
     Check if match has concluded and retrieve score.
@@ -216,6 +348,26 @@ def get_score_for_match(summary, dtstart_string, scores_cache):
     return summary
 
 
+def deduplicate_events(events_list):
+    """
+    Remove duplicate events from combined sources.
+    Returns deduplicated list maintaining order.
+    """
+    seen = {}
+    unique_events = []
+    
+    for event in events_list:
+        summary = event.get("SUMMARY", "")
+        dtstart = event.get("DTSTART", "")
+        key = f"{summary}_{dtstart}"
+        
+        if key not in seen:
+            seen[key] = True
+            unique_events.append(event)
+    
+    return unique_events
+
+
 def build_calendar(events):
     now = datetime.utcnow()
     twelve_months_later = now + timedelta(days=365)
@@ -225,7 +377,8 @@ def build_calendar(events):
         "VERSION:2.0",
         "PRODID:-//AFC Ops Calendar//EN",
         "X-WR-CALNAME:Aberdeen FC Fixtures (Ops View)",
-        f"X-WR-CALDESC:Aberdeen FC Fixtures for the next 12 months ({now.strftime('%Y-%m-%d')} to {twelve_months_later.strftime('%Y-%m-%d')})"
+        f"X-WR-CALDESC:Aberdeen FC Fixtures for the next 12 months ({now.strftime('%Y-%m-%d')} to {twelve_months_later.strftime('%Y-%m-%d')})",
+        "X-WR-TIMEZONE:UTC"
     ]
 
     for e in events:
@@ -237,7 +390,7 @@ def build_calendar(events):
         if e.get("dtend"):
             cal.append(f"DTEND:{e['dtend']}")
         cal.append(f"LOCATION:{e['location']}")
-        cal.append("DESCRIPTION:Auto-generated AFC ops calendar")
+        cal.append("DESCRIPTION:Auto-generated AFC ops calendar - Aberdeen FC")
         cal.append("END:VEVENT")
 
     cal.append("END:VCALENDAR")
@@ -257,10 +410,12 @@ def add_score(summary, date_str, score):
 
 
 def main():
-    print("Updating Aberdeen FC calendar...")
+    print("=" * 60)
+    print("Updating Aberdeen FC calendar - Multi-Source Fixture Fetcher")
+    print("=" * 60)
     
     # Fetch latest scores from AFC website
-    print("Fetching match scores from afc.co.uk...")
+    print("\n[STEP 1] Fetching match scores from afc.co.uk...")
     website_scores = fetch_scores_from_afc_website()
     
     # Load cached scores
@@ -273,48 +428,100 @@ def main():
     if website_scores:
         save_scores(all_scores)
     
-    # Fetch fixtures from iCalendar source
-    response = requests.get(SOURCE_URL)
-    text = response.text
-
+    print("\n[STEP 2] Fetching fixtures from multiple sources...")
+    
+    # Collect events from all sources
+    all_events = []
+    
+    # Source 1: Primary ICS feed
+    print(f"\n  Source 1: ICS Feed ({SOURCE_URL})")
+    try:
+        ics_events = fetch_from_ics_source(SOURCE_URL)
+        all_events.extend(ics_events)
+        print(f"    ✓ Added {len(ics_events)} events")
+    except Exception as e:
+        print(f"    ✗ Error: {e}")
+    
+    # Source 2: AFC Official Website Fixtures
+    print(f"\n  Source 2: AFC Website Fixtures")
+    try:
+        afc_events = fetch_from_afc_website_fixtures()
+        all_events.extend(afc_events)
+        print(f"    ✓ Added {len(afc_events)} events")
+    except Exception as e:
+        print(f"    ✗ Error: {e}")
+    
+    # Source 3: Load any cached fixtures
+    print(f"\n  Source 3: Cached Fixtures")
+    cached_fixtures = load_fixtures_cache()
+    if cached_fixtures:
+        all_events.extend(cached_fixtures.get("events", []))
+        print(f"    ✓ Added {len(cached_fixtures.get('events', []))} cached events")
+    
+    print(f"\n[STEP 3] Processing and filtering fixtures...")
+    
+    # Deduplicate events
+    all_events = deduplicate_events(all_events)
+    print(f"  After deduplication: {len(all_events)} unique events")
+    
+    # Filter to 12 months and process
     events = []
-    block = {}
-
-    for line in text.splitlines():
-        if line == "BEGIN:VEVENT":
-            block = {}
-        elif line == "END:VEVENT":
-            raw_summary = block.get("SUMMARY", "Aberdeen Fixture")
-            location = block.get("LOCATION", "")
-            dtstart = block.get("DTSTART")
+    for block in all_events:
+        raw_summary = block.get("SUMMARY", "Aberdeen Fixture")
+        location = block.get("LOCATION", "")
+        dtstart = block.get("DTSTART")
+        
+        # Filter: only include events within the next 12 months
+        if dtstart and is_within_12_months(dtstart):
+            new_summary = classify(raw_summary, location)
             
-            # Filter: only include events within the next 12 months
-            if dtstart and is_within_12_months(dtstart):
-                new_summary = classify(raw_summary, location)
-                
-                # Check for scores if match has concluded
-                new_summary = get_score_for_match(new_summary, dtstart, all_scores)
+            # Check for scores if match has concluded
+            new_summary = get_score_for_match(new_summary, dtstart, all_scores)
 
-                events.append({
-                    "uid": block.get("UID", raw_summary.replace(" ", "")),
-                    "summary": new_summary,
-                    "dtstart": dtstart,
-                    "dtend": block.get("DTEND"),
-                    "location": location
-                })
-        else:
-            if ":" in line:
-                key, val = line.split(":", 1)
-                block[key] = val
-
+            events.append({
+                "uid": block.get("UID", raw_summary.replace(" ", "")),
+                "summary": new_summary,
+                "dtstart": dtstart,
+                "dtend": block.get("DTEND"),
+                "location": location
+            })
+    
+    # Sort events by date
+    events.sort(key=lambda x: x['dtstart'])
+    
+    print(f"  Filtered to 12-month window: {len(events)} fixtures")
+    
+    # Cache the fixtures
+    print(f"\n[STEP 4] Caching fixtures...")
+    save_fixtures_cache({
+        "events": [
+            {
+                "SUMMARY": e['summary'],
+                "DTSTART": e['dtstart'],
+                "LOCATION": e['location'],
+                "DTEND": e.get('dtend'),
+                "UID": e['uid']
+            }
+            for e in events
+        ],
+        "cached_at": datetime.utcnow().isoformat()
+    })
+    print(f"  ✓ Fixtures cached")
+    
+    # Build and write calendar
+    print(f"\n[STEP 5] Building ICS calendar file...")
     calendar = build_calendar(events)
-
+    
     with open(OUTPUT_FILE, "w") as f:
         f.write(calendar)
     
-    print(f"Calendar updated with {len(events)} events in the next 12 months")
-    if website_scores:
-        print(f"Added/updated {len(website_scores)} match scores from afc.co.uk")
+    print(f"  ✓ Calendar written to {OUTPUT_FILE}")
+    
+    print("\n" + "=" * 60)
+    print(f"SUCCESS: Calendar updated with {len(events)} fixtures")
+    print(f"Time range: Today to 12 months ahead")
+    print(f"Scores captured: {len(all_scores)} matches")
+    print("=" * 60 + "\n")
 
 
 if __name__ == "__main__":

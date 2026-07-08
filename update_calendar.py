@@ -19,24 +19,27 @@ def classify(summary, location):
     if "cup" in summary_lower:
         comp_type = "CUP"
     elif "friendly" in summary_lower:
-        comp_type = "F"
+        comp_type = "FRIENDLY"
     else:
         comp_type = ""
 
-    # Home vs Away
+    # Home vs Away - Make it very visible
     if "pittodrie" in location.lower():
-        ha = "H"
+        ha = "HOME"
+        ha_symbol = "🏠"
         formatted = summary.replace("Aberdeen v", "Aberdeen vs")
     else:
-        ha = "A"
+        ha = "AWAY"
+        ha_symbol = "✈️"
         formatted = summary.replace("v Aberdeen", "@ Aberdeen").replace("Aberdeen v", "Aberdeen @")
 
-    # Build prefix
-    if comp_type == "F":
-        return f"[F] {formatted}"
+    # Build prefix with enhanced home/away visibility
+    if comp_type == "FRIENDLY":
+        return f"[{ha} - FRIENDLY] {formatted}"
     elif comp_type == "CUP":
-        return f"[{ha}-CUP] {formatted}"
+        return f"[{ha} - CUP] {formatted}"
     else:
+        # League match - make home/away very clear
         return f"[{ha}] {formatted}"
 
 

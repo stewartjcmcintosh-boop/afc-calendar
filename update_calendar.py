@@ -2,7 +2,7 @@ import requests
 from datetime import datetime, timedelta
 
 SOURCE_URL = "https://ics.fixtur.es/v2/aberdeen.ics"
-OUTPUT_FILE = "aberdeen_fc_ops_calendar.ics"
+OUTPUT_FILE = "aberdeen_fc_fixtures.ics"
 
 
 def ics_escape(text):

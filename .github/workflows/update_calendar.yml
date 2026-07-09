@@ -2,75 +2,97 @@ name: Update Aberdeen FC Calendar
 
 on:
   schedule:
-    # Run daily at 6:00 AM UTC
+    # Daily at 06:00 UTC
     - cron: '0 6 * * *'
-  
-  # Allow manual trigger from Actions tab
+
+  # Manual trigger
   workflow_dispatch:
-  
-  # Run on push to main branch (for immediate testing)
+
+  # Run when the update script changes
   push:
     branches:
       - main
     paths:
       - 'update_calendar.py'
+      - 'requirements.txt'
+
+concurrency:
+  group: aberdeen-calendar
+  cancel-in-progress: true
 
 jobs:
   update-calendar:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+          cache: 'pip'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
-      
+
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "requirements.txt not found"
+            exit 1
+          fi
+
       - name: Run calendar update script
-        run: python update_calendar.py
-      
-      - name: Check if files changed
+        run: |
+          echo "Starting update..."
+          python update_calendar.py
+          echo "Update complete"
+
+      - name: Check for file changes
         id: verify
         run: |
           if git diff --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes detected"
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Changes detected"
           fi
-      
+
       - name: Commit and push changes
         if: steps.verify.outputs.changed == 'true'
         run: |
           git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add aberdeen_fc_ops_calendar.ics fixtures_cache.json match_scores.json 2>/dev/null || true
-          git commit -m "Update Aberdeen FC fixtures and scores - $(date +'%Y-%m-%d %H:%M:%S UTC')" || true
+          git config --local user.name "GitHub Actions"
+
+          git add \
+            aberdeen_fc_ops_calendar.ics \
+            fixtures_cache.json \
+            match_scores.json \
+            2>/dev/null || true
+
+          git commit -m "Update Aberdeen FC fixtures and scores - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
           git push
-      
-      - name: Create summary
+
+      - name: Create workflow summary
         run: |
-          echo "## ✅ Calendar Update Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Timestamp:** $(date +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ Calendar Update Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Timestamp:** $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
           if [ -f aberdeen_fc_ops_calendar.ics ]; then
             FIXTURE_COUNT=$(grep -c "BEGIN:VEVENT" aberdeen_fc_ops_calendar.ics || echo "0")
-            echo "**Fixtures in calendar:** $FIXTURE_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "**Fixtures in calendar:** $FIXTURE_COUNT" >> "$GITHUB_STEP_SUMMARY"
           fi
+
           if [ -f fixtures_cache.json ]; then
-            echo "**Cache file:** Updated" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Calendar ready at:** https://raw.githubusercontent.com/${{ github.repository }}/main/aberdeen_fc_ops_calendar.ics" >> $GITHUB_STEP_SUMMARY

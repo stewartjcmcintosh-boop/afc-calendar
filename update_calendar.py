@@ -37,27 +37,68 @@ def parse_datetime(dt_string):
         try:
             return datetime.strptime(dt_string, fmt)
         except ValueError:
-            continue
+            pass
 
     return None
 
 
 def classify_fixture(summary):
-    """Add HOME/AWAY indicator."""
+    """
+    Add HOME/AWAY indicators.
+
+    Supports:
+    Aberdeen - Rangers
+    Rangers - Aberdeen
+    Aberdeen v Rangers
+    Rangers v Aberdeen
+    """
 
     summary = summary.strip()
 
-    if summary.startswith("Aberdeen v "):
+    lower = summary.lower()
+
+    home = (
+        lower.startswith("aberdeen - ")
+        or lower.startswith("aberdeen v ")
+    )
+
+    away = (
+        lower.endswith(" - aberdeen")
+        or lower.endswith(" v aberdeen")
+    )
+
+    competition = ""
+
+    cup_keywords = [
+        "cup",
+        "league cup",
+        "carabao",
+        "scottish cup"
+    ]
+
+    if any(word in lower for word in cup_keywords):
+        competition = "CUP"
+
+    elif "friendly" in lower:
+        competition = "FRIENDLY"
+
+    if home:
+        if competition:
+            return f"[HOME - {competition}] {summary}"
+
         return f"[HOME] {summary}"
 
-    if " v Aberdeen" in summary:
+    if away:
+        if competition:
+            return f"[AWAY - {competition}] {summary}"
+
         return f"[AWAY] {summary}"
 
     return summary
 
 
 def fetch_events():
-    """Download and parse ICS source."""
+    """Download and parse ICS feed."""
 
     print(f"Downloading fixtures from {SOURCE_URL}")
 
@@ -90,12 +131,14 @@ def fetch_events():
         if ":" not in line:
             continue
 
-        key, value = line.split(":", 1)
+        key, value = line.split(
+            ":",
+            1
+        )
 
-        # Convert:
+        # Handle lines like:
         # DTSTART;TZID=Europe/London
-        # into:
-        # DTSTART
+
         key = key.split(";")[0]
 
         current[key.strip()] = value.strip()
@@ -106,7 +149,7 @@ def fetch_events():
 
 
 def filter_events(events):
-    """Keep last 30 days and next 12 months."""
+    """Keep previous 30 days and next 12 months."""
 
     now = datetime.utcnow()
 
@@ -159,23 +202,28 @@ def build_calendar(events):
 
         dtstart = event["DTSTART"]
 
-        start_dt = parse_datetime(dtstart)
+        start_dt = parse_datetime(
+            dtstart
+        )
 
         if start_dt:
+
             end_dt = (
-                start_dt +
-                timedelta(hours=2)
+                start_dt
+                + timedelta(hours=2)
             )
 
             dtend = end_dt.strftime(
                 "%Y%m%dT%H%M%SZ"
             )
+
         else:
             dtend = dtstart
 
         uid = event.get("UID")
 
         if not uid:
+
             uid = (
                 f"{dtstart}-"
                 f"{summary.replace(' ', '')}"

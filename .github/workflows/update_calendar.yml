@@ -2,13 +2,10 @@ name: Update Aberdeen FC Calendar
 
 on:
   schedule:
-    # Daily at 06:00 UTC
     - cron: '0 6 * * *'
 
-  # Manual run from Actions tab
   workflow_dispatch:
 
-  # Run when code changes
   push:
     branches:
       - main
@@ -29,22 +26,60 @@ jobs:
       contents: write
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-          if [ ! -f requirements.txt ]; then
-            echo "ERROR: requirements.txt not found"
+      - name: Run calendar update
+        run: |
+          python update_calendar.py
+
+      - name: Verify calendar file exists
+        run: |
+          if [ ! -f "aberdeen_fc_ops_calendar.ics" ]; then
+            echo "Calendar file not created"
             exit 1
+          fi
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "action@github.com"
+
+          git add aberdeen_fc_ops_calendar.ics
+
+          git commit -m "Update Aberdeen FC calendar $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+          git push
+
+      - name: Summary
+        run: |
+          echo "## Aberdeen FC Calendar Update" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          COUNT=$(grep -c "BEGIN:VEVENT" aberdeen_fc_ops_calendar.ics || echo 0)
+
+          echo "Fixtures generated: $COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Calendar URL:" >> $GITHUB_STEP_SUMMARY
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/aberdeen_fc_ops_calendar.ics" >> $GITHUB_STEP_SUMMARY

@@ -1,8 +1,9 @@
-import requests
-from datetime import datetime, timedelta
 import json
 import os
 import re
+from datetime import datetime, timedelta
+
+import requests
 from bs4 import BeautifulSoup
 
 SOURCE_URL = "https://ics.fixtur.es/v2/aberdeen.ics"
@@ -23,31 +24,25 @@ session.headers.update(
 )
 
 
-def classify(summary, location):
-    summary_lower = summary.lower()
+def ics_escape(text):
+    """Escape text according to RFC5545."""
 
-    if any(x in summary_lower for x in ["cup", "carabao", "league cup"]):
-        competition = "CUP"
-    elif "friendly" in summary_lower:
-        competition = "FRIENDLY"
-    else:
-        competition = None
+    if text is None:
+        return ""
 
-    if location and (
-        "pittodrie" in location.lower()
-        or "aberdeen" in location.lower()
-    ):
-        ha = "HOME"
-    else:
-        ha = "AWAY"
-
-    if competition:
-        return f"[{ha} - {competition}] {summary}"
-
-    return f"[{ha}] {summary}"
+    return (
+        str(text)
+        .replace("\\", "\\\\")
+        .replace(";", r"\;")
+        .replace(",", r"\,")
+        .replace("\n", r"\n")
+        .replace("\r", "")
+    )
 
 
 def parse_datetime(dt_string):
+    """Parse iCalendar date strings."""
+
     if not dt_string:
         return None
 
@@ -67,41 +62,105 @@ def parse_datetime(dt_string):
         return None
 
 
-def is_within_12_months(dtstart_string):
+def is_relevant_fixture(dtstart_string):
+    """
+    Keep fixtures from:
+    - previous 30 days
+    - next 12 months
+    """
+
     event_date = parse_datetime(dtstart_string)
 
     if event_date is None:
         return False
 
     now = datetime.utcnow()
-    limit = now + timedelta(days=365)
 
-    return now <= event_date <= limit
+    earliest = now - timedelta(days=30)
+    latest = now + timedelta(days=365)
+
+    return earliest <= event_date <= latest
+
+
+def classify(summary, location):
+    """Add HOME/AWAY markers and competition type."""
+
+    summary_lower = summary.lower()
+
+    competition = ""
+
+    if any(
+        keyword in summary_lower
+        for keyword in ["cup", "league cup", "carabao"]
+    ):
+        competition = "CUP"
+
+    elif "friendly" in summary_lower:
+        competition = "FRIENDLY"
+
+    if location and (
+        "pittodrie" in location.lower()
+        or "aberdeen" in location.lower()
+    ):
+        venue = "HOME"
+    else:
+        venue = "AWAY"
+
+    if competition:
+        return f"[{venue} - {competition}] {summary}"
+
+    return f"[{venue}] {summary}"
 
 
 def load_json(filename):
+
     if not os.path.exists(filename):
         return {}
 
     try:
-        with open(filename, "r", encoding="utf-8") as f:
+
+        with open(
+            filename,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
             return json.load(f)
 
     except Exception as e:
-        print(f"Warning loading {filename}: {e}")
+
+        print(
+            f"Warning loading {filename}: {e}"
+        )
+
         return {}
 
 
 def save_json(filename, data):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+
+    with open(
+        filename,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            indent=2
+        )
 
 
 def fetch_scores_from_afc_website():
+    """
+    Optional score enrichment.
+    Failure should never stop the run.
+    """
 
-    print("  → Fetching match scores...")
+    print("  → Fetching results")
 
     try:
+
         response = session.get(
             AFC_RESULTS_URL,
             timeout=20
@@ -114,20 +173,24 @@ def fetch_scores_from_afc_website():
             "html.parser"
         )
 
-        scores = {}
-
-        text = soup.get_text(" ", strip=True)
-
-        score_matches = re.findall(
-            r"Aberdeen.*?(\d+)\s*[-–]\s*(\d+)",
-            text,
-            flags=re.IGNORECASE
+        text = soup.get_text(
+            " ",
+            strip=True
         )
 
-        for idx, score in enumerate(score_matches):
-            scores[f"result_{idx}"] = (
-                f"{score[0]}-{score[1]}"
-            )
+        scores = {}
+
+        matches = re.findall(
+            r"Aberdeen.*?(\d+)\s*[-–]\s*(\d+)",
+            text,
+            re.IGNORECASE
+        )
+
+        for idx, score in enumerate(matches):
+
+            scores[
+                f"score_{idx}"
+            ] = f"{score[0]}-{score[1]}"
 
         print(
             f"    Found {len(scores)} score entries"
@@ -144,35 +207,39 @@ def fetch_scores_from_afc_website():
         return {}
 
 
-def fetch_from_ics_source(url):
+def fetch_from_ics_source():
+    """Download fixture list from ICS source."""
 
-    print(f"  → Downloading {url}")
+    print(
+        f"  → Downloading fixtures from {SOURCE_URL}"
+    )
 
     try:
 
         response = session.get(
-            url,
+            SOURCE_URL,
             timeout=20
         )
 
         response.raise_for_status()
 
         events = []
-        block = {}
+        event = {}
 
         for line in response.text.splitlines():
 
             line = line.strip()
 
             if line == "BEGIN:VEVENT":
-                block = {}
+
+                event = {}
 
             elif line == "END:VEVENT":
 
-                if block.get("DTSTART"):
-                    events.append(block)
+                if event.get("DTSTART"):
+                    events.append(event)
 
-                block = {}
+                event = {}
 
             elif ":" in line:
 
@@ -181,10 +248,10 @@ def fetch_from_ics_source(url):
                     1
                 )
 
-                block[key.strip()] = value.strip()
+                event[key.strip()] = value.strip()
 
         print(
-            f"    Found {len(events)} events"
+            f"    Found {len(events)} fixtures"
         )
 
         return events
@@ -192,15 +259,19 @@ def fetch_from_ics_source(url):
     except Exception as e:
 
         print(
-            f"    Error downloading ICS: {e}"
+            f"    Download failed: {e}"
         )
 
         return []
 
 
 def fetch_from_afc_fixtures_page():
+    """
+    Optional AFC scraper.
+    Returns [] if unavailable.
+    """
 
-    print("  → Scraping AFC fixtures page")
+    print("  → Attempting AFC fixture scrape")
 
     try:
 
@@ -211,25 +282,16 @@ def fetch_from_afc_fixtures_page():
 
         response.raise_for_status()
 
-        soup = BeautifulSoup(
-            response.content,
-            "html.parser"
+        print(
+            "    AFC fixture page reachable"
         )
-
-        text = soup.get_text(
-            " ",
-            strip=True
-        )
-
-        if "Aberdeen" not in text:
-            return []
 
         return []
 
     except Exception as e:
 
         print(
-            f"    Warning: AFC fixture scrape failed: {e}"
+            f"    AFC scraper unavailable: {e}"
         )
 
         return []
@@ -237,13 +299,14 @@ def fetch_from_afc_fixtures_page():
 
 def get_score_for_match(
     summary,
-    dtstart_string,
+    dtstart,
     scores_cache
 ):
+    """
+    Placeholder for future score matching.
+    """
 
-    event_date = parse_datetime(
-        dtstart_string
-    )
+    event_date = parse_datetime(dtstart)
 
     if event_date is None:
         return summary
@@ -254,19 +317,19 @@ def get_score_for_match(
     return summary
 
 
-def deduplicate_events(event_list):
+def deduplicate_events(events):
 
     unique = {}
 
-    for event in event_list:
+    for event in events:
 
         summary = (
             event.get(
                 "SUMMARY",
                 ""
             )
-            .lower()
             .strip()
+            .lower()
         )
 
         dtstart = (
@@ -294,7 +357,10 @@ def build_calendar(events):
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         "X-WR-CALNAME:Aberdeen FC Fixtures",
-        f"X-WR-CALDESC:{len(events)} Aberdeen FC fixtures"
+        "X-WR-TIMEZONE:UTC",
+        f"X-WR-CALDESC:{len(events)} Aberdeen FC fixtures",
+        "X-PUBLISHED-TTL:PT24H",
+        "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
     ]
 
     for event in events:
@@ -345,15 +411,15 @@ def build_calendar(events):
                 )
 
         calendar.append(
-            f"SUMMARY:{event['summary']}"
+            f"SUMMARY:{ics_escape(event['summary'])}"
         )
 
         calendar.append(
-            f"LOCATION:{event['location']}"
+            f"LOCATION:{ics_escape(event['location'])}"
         )
 
         calendar.append(
-            f"DESCRIPTION:{event['description']}"
+            f"DESCRIPTION:{ics_escape(event['description'])}"
         )
 
         calendar.append(
@@ -377,18 +443,20 @@ def main():
     print("ABERDEEN FC CALENDAR UPDATE")
     print("=" * 70)
 
+    print("\n[1/5] Loading scores")
+
     scores_cache = load_json(
         SCORES_FILE
     )
 
-    new_scores = (
+    latest_scores = (
         fetch_scores_from_afc_website()
     )
 
-    if new_scores:
+    if latest_scores:
 
         scores_cache.update(
-            new_scores
+            latest_scores
         )
 
         save_json(
@@ -396,34 +464,24 @@ def main():
             scores_cache
         )
 
-    print("\nFetching fixtures")
+    print("\n[2/5] Fetching fixtures")
 
     all_events = []
 
-    ics_events = (
-        fetch_from_ics_source(
-            SOURCE_URL
-        )
-    )
-
     all_events.extend(
-        ics_events
+        fetch_from_ics_source()
     )
 
     try:
 
-        afc_events = (
-            fetch_from_afc_fixtures_page()
-        )
-
         all_events.extend(
-            afc_events
+            fetch_from_afc_fixtures_page()
         )
 
     except Exception as e:
 
         print(
-            f"Warning: AFC source skipped: {e}"
+            f"Warning: AFC scrape skipped: {e}"
         )
 
     cached = load_json(
@@ -436,15 +494,17 @@ def main():
             cached["events"]
         )
 
-    all_events = (
-        deduplicate_events(
-            all_events
-        )
+    print("\n[3/5] Deduplicating")
+
+    all_events = deduplicate_events(
+        all_events
     )
 
     print(
-        f"Unique fixtures: {len(all_events)}"
+        f"Unique events: {len(all_events)}"
     )
+
+    print("\n[4/5] Processing fixtures")
 
     processed = []
 
@@ -456,7 +516,7 @@ def main():
 
         if (
             not dtstart
-            or not is_within_12_months(
+            or not is_relevant_fixture(
                 dtstart
             )
         ):
@@ -473,23 +533,27 @@ def main():
             )
         )
 
-        summary = (
-            get_score_for_match(
-                summary,
-                dtstart,
-                scores_cache
-            )
+        summary = get_score_for_match(
+            summary,
+            dtstart,
+            scores_cache
         )
+
+        uid = event.get(
+            "UID"
+        )
+
+        if not uid:
+
+            uid = (
+                f"{dtstart}-"
+                f"{summary.replace(' ', '')}"
+                "@aberdeenfc"
+            )
 
         processed.append(
             {
-                "uid": event.get(
-                    "UID",
-                    summary.replace(
-                        " ",
-                        ""
-                    )
-                ),
+                "uid": uid,
                 "summary": summary,
                 "dtstart": dtstart,
                 "dtend": event.get(
@@ -507,7 +571,11 @@ def main():
         )
 
     processed.sort(
-        key=lambda x: x["dtstart"]
+        key=lambda x:
+        parse_datetime(
+            x["dtstart"]
+        )
+        or datetime.max
     )
 
     save_json(
@@ -538,10 +606,10 @@ def main():
         }
     )
 
-    calendar_text = (
-        build_calendar(
-            processed
-        )
+    print("\n[5/5] Building calendar")
+
+    calendar_text = build_calendar(
+        processed
     )
 
     with open(
@@ -554,17 +622,13 @@ def main():
             calendar_text
         )
 
-    print(
-        f"Calendar written: {OUTPUT_FILE}"
-    )
-
-    print(
-        f"Fixtures: {len(processed)}"
-    )
-
-    print(
-        "\n✅ Update complete"
-    )
+    print()
+    print("=" * 70)
+    print("✅ CALENDAR UPDATED")
+    print("=" * 70)
+    print(f"Fixtures: {len(processed)}")
+    print(f"Output: {OUTPUT_FILE}")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,294 @@
+{
+  "cached_at": "2026-07-09T14:32:59.470780",
+  "total_fixtures": 36,
+  "events": [
+    {
+      "SUMMARY": "[AWAY] Cove Rangers - Aberdeen (0-1)",
+      "DTSTART": "20260627T130000Z",
+      "DTEND": "20260627T144500Z",
+      "LOCATION": "",
+      "UID": "StJWgbPUOgWuso3bxO5ZKSKIXg2wyQZVovRxXWNY@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] FC Twente - Aberdeen (1-0)",
+      "DTSTART": "20260704T120000Z",
+      "DTEND": "20260704T134500Z",
+      "LOCATION": "",
+      "UID": "NZyKHrl1N1jjoHoNiCHrKVVjLNHe4uXHxULL8fjF@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Linfield FC - Aberdeen",
+      "DTSTART": "20260711T130000Z",
+      "DTEND": "20260711T144500Z",
+      "LOCATION": "",
+      "UID": "fioggAwesPOy5pGBYVeaoX8uaRVOjXn5JcltrCM8@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Heart of Midlothian",
+      "DTSTART": "20260801T163000Z",
+      "DTEND": "20260801T181500Z",
+      "LOCATION": "",
+      "UID": "6ff6Sox0julnlEWud4kXE7OHvuPfNCaQnswJlXNH@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Dundee FC - Aberdeen",
+      "DTSTART": "20260808T140000Z",
+      "DTEND": "20260808T154500Z",
+      "LOCATION": "",
+      "UID": "fR5Rngc5e85XV2jDOuGKEvOfU4x7VAllvJ12BmFG@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Motherwell - Aberdeen",
+      "DTSTART": "20260822T140000Z",
+      "DTEND": "20260822T154500Z",
+      "LOCATION": "",
+      "UID": "7acYHDAfnthdrhBzypEq6dspsc0AKpMsl98YSsmO@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Rangers",
+      "DTSTART": "20260829T140000Z",
+      "DTEND": "20260829T154500Z",
+      "LOCATION": "",
+      "UID": "aLmQkLu5xJXzmoDzdfsnMH8aeia6jCOlcQjP0eZs@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Celtic - Aberdeen",
+      "DTSTART": "20260902T184500Z",
+      "DTEND": "20260902T203000Z",
+      "LOCATION": "",
+      "UID": "emCjso7vnAlJaDbpSquhWBNcV4Y1p1CpIoYiPtzk@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Kilmarnock",
+      "DTSTART": "20260905T140000Z",
+      "DTEND": "20260905T154500Z",
+      "LOCATION": "",
+      "UID": "bfL4RS5BJTvSExqKBfoQyDvSR0Rvkv8ihJD9Ejhr@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Hibernian - Aberdeen",
+      "DTSTART": "20260919T140000Z",
+      "DTEND": "20260919T154500Z",
+      "LOCATION": "",
+      "UID": "rr2i4kp2Fm0om96lLceg1tNQ69rQMWOEcWksBtny@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - St. Johnstone",
+      "DTSTART": "20261010T140000Z",
+      "DTEND": "20261010T154500Z",
+      "LOCATION": "",
+      "UID": "uWBV6MC9KDfuvYEkH61z85iFHcFQ43xLMu2TyVHQ@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - St Mirren",
+      "DTSTART": "20261017T140000Z",
+      "DTEND": "20261017T154500Z",
+      "LOCATION": "",
+      "UID": "1nhmiy4td13v2PgRMbOyWm9lqUPWSPdjgjfspLEw@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Dundee United - Aberdeen",
+      "DTSTART": "20261024T140000Z",
+      "DTEND": "20261024T154500Z",
+      "LOCATION": "",
+      "UID": "M8rlxi4CouGqhWBvKDKrsbElc1k33eneaEl3sEpb@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Falkirk",
+      "DTSTART": "20261028T194500Z",
+      "DTEND": "20261028T213000Z",
+      "LOCATION": "",
+      "UID": "LIQ9bP3zmfXXjqMjqMp1PhCfPWxIEoA9zopGpUTI@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Rangers - Aberdeen",
+      "DTSTART": "20261031T150000Z",
+      "DTEND": "20261031T164500Z",
+      "LOCATION": "",
+      "UID": "EVxZ2rYUPDZ0EwEFQw2EBE3ggrIGNrrkYw9k43Sg@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Hibernian",
+      "DTSTART": "20261107T150000Z",
+      "DTEND": "20261107T164500Z",
+      "LOCATION": "",
+      "UID": "QXlh18QCkqIvkUhXzQgNtlnoxANyGzXoZNkZa4Yu@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Kilmarnock - Aberdeen",
+      "DTSTART": "20261121T150000Z",
+      "DTEND": "20261121T164500Z",
+      "LOCATION": "",
+      "UID": "OajOOtuipn0QR7NBBOo2uzbq71MUljvFwanbdYbS@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Dundee FC",
+      "DTSTART": "20261128T150000Z",
+      "DTEND": "20261128T164500Z",
+      "LOCATION": "",
+      "UID": "j3WjnoEmjH77KfGaTeCicG3pF9JPniha5BVDvgsW@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Heart of Midlothian - Aberdeen",
+      "DTSTART": "20261202T194500Z",
+      "DTEND": "20261202T213000Z",
+      "LOCATION": "",
+      "UID": "8aaULjBYxS9QB5EnTWXox5jSRCJAs11w6iwStOsZ@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Dundee United",
+      "DTSTART": "20261205T150000Z",
+      "DTEND": "20261205T164500Z",
+      "LOCATION": "",
+      "UID": "LoifYGDJlAebCYVmwJMqREJXe32ROT5vNCuY7rHM@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Falkirk - Aberdeen",
+      "DTSTART": "20261212T150000Z",
+      "DTEND": "20261212T164500Z",
+      "LOCATION": "",
+      "UID": "t4mYxOjEBQvuskYxGAibcrINkKVlr3wIRz394oDs@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Celtic",
+      "DTSTART": "20261219T150000Z",
+      "DTEND": "20261219T164500Z",
+      "LOCATION": "",
+      "UID": "Xy21dDGzQCqferCnUBaFogqSguzIlIV16eohOQTz@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] St. Johnstone - Aberdeen",
+      "DTSTART": "20261226T150000Z",
+      "DTEND": "20261226T164500Z",
+      "LOCATION": "",
+      "UID": "PH3vlgUzGcqiETUTiHKqX9wzXCNXQsd9KyEWG9Rk@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Motherwell",
+      "DTSTART": "20261230T194500Z",
+      "DTEND": "20261230T213000Z",
+      "LOCATION": "",
+      "UID": "KgWWLq5g17FMTGHEUa0GRrK6pGj9qEPVU1WRPJn8@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] St Mirren - Aberdeen",
+      "DTSTART": "20270102T150000Z",
+      "DTEND": "20270102T164500Z",
+      "LOCATION": "",
+      "UID": "hJov4Q9I4qNBQwtrWbu8uYLGKe8eL2a5JbhtYaxi@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Heart of Midlothian",
+      "DTSTART": "20270109T150000Z",
+      "DTEND": "20270109T164500Z",
+      "LOCATION": "",
+      "UID": "0A17if97qxoT067n4p6qpI1gKtBkOz1AL6aton8q@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Dundee FC - Aberdeen",
+      "DTSTART": "20270123T150000Z",
+      "DTEND": "20270123T164500Z",
+      "LOCATION": "",
+      "UID": "fyQMo35Tle3zqyiziDYYBG0xsDtoM3Gk2QyHbJYd@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Rangers",
+      "DTSTART": "20270130T150000Z",
+      "DTEND": "20270130T164500Z",
+      "LOCATION": "",
+      "UID": "bJCYgyVQAxpDBD2RDBEnD052STqrfnHJiViMXj6X@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Falkirk",
+      "DTSTART": "20270203T194500Z",
+      "DTEND": "20270203T213000Z",
+      "LOCATION": "",
+      "UID": "9inkjRyaTi4trhukOfOSwkzGOTjVdY5qZwDzgkek@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Hibernian - Aberdeen",
+      "DTSTART": "20270213T150000Z",
+      "DTEND": "20270213T164500Z",
+      "LOCATION": "",
+      "UID": "VTudSVOqiIWsXlaVCd7fdIoW7MFOaz5As1ThutY2@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Dundee United - Aberdeen",
+      "DTSTART": "20270220T150000Z",
+      "DTEND": "20270220T164500Z",
+      "LOCATION": "",
+      "UID": "OZtkQbr4b9bgYWuMzDKWK9SbH6mQSFcSHzyvanKI@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - St. Johnstone",
+      "DTSTART": "20270227T150000Z",
+      "DTEND": "20270227T164500Z",
+      "LOCATION": "",
+      "UID": "toregTBFtfwlAnNTHy9Fenqab7f89oEpxhIamG9i@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - St Mirren",
+      "DTSTART": "20270313T150000Z",
+      "DTEND": "20270313T164500Z",
+      "LOCATION": "",
+      "UID": "q2O5HAnS8eJc5HZUFOlcK6FzDc3kQr91YcgpKkXm@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Celtic - Aberdeen",
+      "DTSTART": "20270320T150000Z",
+      "DTEND": "20270320T164500Z",
+      "LOCATION": "",
+      "UID": "vfpwqdMDHv7deN1d3bqze2GEp8KNh8RWlxQlmEqO@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Motherwell - Aberdeen",
+      "DTSTART": "20270403T140000Z",
+      "DTEND": "20270403T154500Z",
+      "LOCATION": "",
+      "UID": "4HS8OSx98V0dkeYdcFZNkWDukTTl8b5HxmwztsY3@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    },
+    {
+      "SUMMARY": "[AWAY] Aberdeen - Kilmarnock",
+      "DTSTART": "20270410T140000Z",
+      "DTEND": "20270410T154500Z",
+      "LOCATION": "",
+      "UID": "2Hcr80319Lg3GCXB0unf0NoT1THhPtKbYuOtlYOr@maak-agenda.nl",
+      "DESCRIPTION": "Calendar not up to date? Check https://fixtur.es/up-to-date?pat"
+    }
+  ]
+}

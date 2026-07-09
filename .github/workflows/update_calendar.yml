@@ -1,70 +1,256 @@
-name: Update Aberdeen FC Calendar
+import requests
+from datetime import datetime, timedelta
 
-on:
-  schedule:
-    - cron: '0 6 * * *'
+SOURCE_URL = "https://ics.fixtur.es/v2/aberdeen.ics"
+OUTPUT_FILE = "aberdeen_fc_ops_calendar.ics"
 
-  workflow_dispatch:
 
-  push:
-    branches:
-      - main
-    paths:
-      - 'update_calendar.py'
-      - 'requirements.txt'
+def ics_escape(text):
+    if not text:
+        return ""
 
-concurrency:
-  group: aberdeen-calendar
-  cancel-in-progress: true
+    return (
+        str(text)
+        .replace("\\", "\\\\")
+        .replace(";", r"\;")
+        .replace(",", r"\,")
+        .replace("\n", r"\n")
+        .replace("\r", "")
+    )
 
-jobs:
-  update-calendar:
-    runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
+def parse_datetime(dt_string):
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    if not dt_string:
+        return None
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
+    formats = [
+        "%Y%m%dT%H%M%SZ",
+        "%Y%m%dT%H%M%S",
+        "%Y%m%d"
+    ]
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    for fmt in formats:
+        try:
+            return datetime.strptime(
+                dt_string,
+                fmt
+            )
+        except ValueError:
+            pass
 
-      - name: Run calendar update script
-        run: python update_calendar.py
+    return None
 
-      - name: Detect changes
-        id: verify
-        run: |
-          if git diff --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
 
-      - name: Commit changes
-        if: steps.verify.outputs.changed == 'true'
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Actions"
+def classify(summary):
 
-          git add .
+    lower = summary.lower()
 
-          git commit -m "Update Aberdeen FC Calendar $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+    if "aberdeen" not in lower:
+        return summary
 
-          git push
+    if summary.startswith("Aberdeen v"):
+        return "[HOME] " + summary
 
-      - name: Summary
-        run: |
-          echo "## Aberdeen FC Calendar Updated" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Generated: $(date -u)" >> $GITHUB_STEP_SUMMARY
+    if " v Aberdeen" in summary:
+        return "[AWAY] " + summary
+
+    return summary
+
+
+def fetch_events():
+
+    print(f"Downloading {SOURCE_URL}")
+
+    response = requests.get(
+        SOURCE_URL,
+        timeout=30
+    )
+
+    response.raise_for_status()
+
+    events = []
+    current = {}
+
+    for line in response.text.splitlines():
+
+        line = line.strip()
+
+        if line == "BEGIN:VEVENT":
+            current = {}
+            continue
+
+        if line == "END:VEVENT":
+
+            if current.get("DTSTART"):
+                events.append(current)
+
+            current = {}
+            continue
+
+        if ":" not in line:
+            continue
+
+        key, value = line.split(
+            ":",
+            1
+        )
+
+        # IMPORTANT:
+        # converts
+        # DTSTART;TZID=Europe/London
+        # to
+        # DTSTART
+
+        key = key.split(";")[0]
+
+        current[key] = value
+
+    print(f"Downloaded {len(events)} events")
+
+    return events
+
+
+def filter_events(events):
+
+    now = datetime.utcnow()
+
+    start_window = now - timedelta(days=30)
+    end_window = now + timedelta(days=365)
+
+    filtered = []
+
+    for event in events:
+
+        dtstart = parse_datetime(
+            event.get("DTSTART")
+        )
+
+        if dtstart is None:
+            continue
+
+        if start_window <= dtstart <= end_window:
+            filtered.append(event)
+
+    print(
+        f"Fixtures within range: {len(filtered)}"
+    )
+
+    return filtered
+
+
+def build_calendar(events):
+
+    cal = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Aberdeen FC//Fixtures//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:Aberdeen FC Fixtures",
+        "X-WR-TIMEZONE:UTC",
+        "X-PUBLISHED-TTL:PT24H",
+        "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
+    ]
+
+    for event in events:
+
+        summary = classify(
+            event.get(
+                "SUMMARY",
+                "Aberdeen FC Fixture"
+            )
+        )
+
+        uid = event.get("UID")
+
+        if not uid:
+
+            uid = (
+                event["DTSTART"]
+                + "-"
+                + summary.replace(
+                    " ",
+                    ""
+                )
+                + "@aberdeenfc"
+            )
+
+        dtstart = event["DTSTART"]
+
+        start_dt = parse_datetime(
+            dtstart
+        )
+
+        if start_dt:
+            end_dt = (
+                start_dt
+                + timedelta(hours=2)
+            )
+
+            dtend = end_dt.strftime(
+                "%Y%m%dT%H%M%SZ"
+            )
+        else:
+            dtend = dtstart
+
+        cal.extend(
+            [
+                "BEGIN:VEVENT",
+                f"UID:{uid}",
+                f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
+                f"DTSTART:{dtstart}",
+                f"DTEND:{dtend}",
+                f"SUMMARY:{ics_escape(summary)}",
+                f"LOCATION:{ics_escape(event.get('LOCATION',''))}",
+                f"DESCRIPTION:{ics_escape(event.get('DESCRIPTION','Aberdeen FC Fixture'))}",
+                "STATUS:CONFIRMED",
+                "END:VEVENT"
+            ]
+        )
+
+    cal.append("END:VCALENDAR")
+
+    return "\n".join(cal)
+
+
+def main():
+
+    print("=" * 60)
+    print("ABERDEEN FC CALENDAR UPDATE")
+    print("=" * 60)
+
+    events = fetch_events()
+
+    events = filter_events(events)
+
+    events.sort(
+        key=lambda e:
+        parse_datetime(
+            e.get("DTSTART")
+        )
+        or datetime.max
+    )
+
+    calendar = build_calendar(
+        events
+    )
+
+    with open(
+        OUTPUT_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
+        f.write(calendar)
+
+    print(
+        f"Calendar written: {OUTPUT_FILE}"
+    )
+
+    print(
+        f"Fixtures included: {len(events)}"
+    )
+
+
+if __name__ == "__main__":
+    main()

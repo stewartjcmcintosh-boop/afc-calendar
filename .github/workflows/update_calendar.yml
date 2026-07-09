@@ -1,256 +1,50 @@
-import requests
-from datetime import datetime, timedelta
-
-SOURCE_URL = "https://ics.fixtur.es/v2/aberdeen.ics"
-OUTPUT_FILE = "aberdeen_fc_ops_calendar.ics"
-
-
-def ics_escape(text):
-    if not text:
-        return ""
-
-    return (
-        str(text)
-        .replace("\\", "\\\\")
-        .replace(";", r"\;")
-        .replace(",", r"\,")
-        .replace("\n", r"\n")
-        .replace("\r", "")
-    )
-
-
-def parse_datetime(dt_string):
-
-    if not dt_string:
-        return None
-
-    formats = [
-        "%Y%m%dT%H%M%SZ",
-        "%Y%m%dT%H%M%S",
-        "%Y%m%d"
-    ]
-
-    for fmt in formats:
-        try:
-            return datetime.strptime(
-                dt_string,
-                fmt
-            )
-        except ValueError:
-            pass
-
-    return None
-
-
-def classify(summary):
-
-    lower = summary.lower()
-
-    if "aberdeen" not in lower:
-        return summary
-
-    if summary.startswith("Aberdeen v"):
-        return "[HOME] " + summary
-
-    if " v Aberdeen" in summary:
-        return "[AWAY] " + summary
-
-    return summary
-
-
-def fetch_events():
-
-    print(f"Downloading {SOURCE_URL}")
-
-    response = requests.get(
-        SOURCE_URL,
-        timeout=30
-    )
-
-    response.raise_for_status()
-
-    events = []
-    current = {}
-
-    for line in response.text.splitlines():
-
-        line = line.strip()
-
-        if line == "BEGIN:VEVENT":
-            current = {}
-            continue
-
-        if line == "END:VEVENT":
-
-            if current.get("DTSTART"):
-                events.append(current)
-
-            current = {}
-            continue
-
-        if ":" not in line:
-            continue
-
-        key, value = line.split(
-            ":",
-            1
-        )
-
-        # IMPORTANT:
-        # converts
-        # DTSTART;TZID=Europe/London
-        # to
-        # DTSTART
-
-        key = key.split(";")[0]
-
-        current[key] = value
-
-    print(f"Downloaded {len(events)} events")
-
-    return events
-
-
-def filter_events(events):
-
-    now = datetime.utcnow()
-
-    start_window = now - timedelta(days=30)
-    end_window = now + timedelta(days=365)
-
-    filtered = []
-
-    for event in events:
-
-        dtstart = parse_datetime(
-            event.get("DTSTART")
-        )
-
-        if dtstart is None:
-            continue
-
-        if start_window <= dtstart <= end_window:
-            filtered.append(event)
-
-    print(
-        f"Fixtures within range: {len(filtered)}"
-    )
-
-    return filtered
-
-
-def build_calendar(events):
-
-    cal = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Aberdeen FC//Fixtures//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "X-WR-CALNAME:Aberdeen FC Fixtures",
-        "X-WR-TIMEZONE:UTC",
-        "X-PUBLISHED-TTL:PT24H",
-        "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
-    ]
-
-    for event in events:
-
-        summary = classify(
-            event.get(
-                "SUMMARY",
-                "Aberdeen FC Fixture"
-            )
-        )
-
-        uid = event.get("UID")
-
-        if not uid:
-
-            uid = (
-                event["DTSTART"]
-                + "-"
-                + summary.replace(
-                    " ",
-                    ""
-                )
-                + "@aberdeenfc"
-            )
-
-        dtstart = event["DTSTART"]
-
-        start_dt = parse_datetime(
-            dtstart
-        )
-
-        if start_dt:
-            end_dt = (
-                start_dt
-                + timedelta(hours=2)
-            )
-
-            dtend = end_dt.strftime(
-                "%Y%m%dT%H%M%SZ"
-            )
-        else:
-            dtend = dtstart
-
-        cal.extend(
-            [
-                "BEGIN:VEVENT",
-                f"UID:{uid}",
-                f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
-                f"DTSTART:{dtstart}",
-                f"DTEND:{dtend}",
-                f"SUMMARY:{ics_escape(summary)}",
-                f"LOCATION:{ics_escape(event.get('LOCATION',''))}",
-                f"DESCRIPTION:{ics_escape(event.get('DESCRIPTION','Aberdeen FC Fixture'))}",
-                "STATUS:CONFIRMED",
-                "END:VEVENT"
-            ]
-        )
-
-    cal.append("END:VCALENDAR")
-
-    return "\n".join(cal)
-
-
-def main():
-
-    print("=" * 60)
-    print("ABERDEEN FC CALENDAR UPDATE")
-    print("=" * 60)
-
-    events = fetch_events()
-
-    events = filter_events(events)
-
-    events.sort(
-        key=lambda e:
-        parse_datetime(
-            e.get("DTSTART")
-        )
-        or datetime.max
-    )
-
-    calendar = build_calendar(
-        events
-    )
-
-    with open(
-        OUTPUT_FILE,
-        "w",
-        encoding="utf-8"
-    ) as f:
-        f.write(calendar)
-
-    print(
-        f"Calendar written: {OUTPUT_FILE}"
-    )
-
-    print(
-        f"Fixtures included: {len(events)}"
-    )
-
-
-if __name__ == "__main__":
-    main()
+name: Update Aberdeen FC Calendar
+
+on:
+  schedule:
+    # Daily at 06:00 UTC
+    - cron: '0 6 * * *'
+
+  # Manual run from Actions tab
+  workflow_dispatch:
+
+  # Run when code changes
+  push:
+    branches:
+      - main
+    paths:
+      - 'update_calendar.py'
+      - 'requirements.txt'
+      - '.github/workflows/update-calendar.yml'
+
+concurrency:
+  group: aberdeen-fc-calendar
+  cancel-in-progress: true
+
+jobs:
+  update-calendar:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+          if [ ! -f requirements.txt ]; then
+            echo "ERROR: requirements.txt not found"
+            exit 1

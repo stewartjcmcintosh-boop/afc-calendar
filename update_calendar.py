@@ -85,13 +85,11 @@ def classify_fixture(summary):
     if home:
         if competition:
             return f"[HOME - {competition}] {summary}"
-
         return f"[HOME] {summary}"
 
     if away:
         if competition:
             return f"[AWAY - {competition}] {summary}"
-
         return f"[AWAY] {summary}"
 
     return summary
@@ -131,13 +129,11 @@ def fetch_events():
         if ":" not in line:
             continue
 
-        key, value = line.split(
-            ":",
-            1
-        )
+        key, value = line.split(":", 1)
 
-        # Handle lines like:
+        # Handle:
         # DTSTART;TZID=Europe/London
+        # DTSTART;VALUE=DATE
 
         key = key.split(";")[0]
 
@@ -238,6 +234,7 @@ def build_calendar(events):
 
     lines.append("END:VCALENDAR")
 
+    # RFC5545 requires CRLF line endings
     return "\r\n".join(lines) + "\r\n"
 
 
@@ -260,15 +257,13 @@ def main():
 
     calendar = build_calendar(events)
 
-
-with open(
-    OUTPUT_FILE,
-    "w",
-    encoding="utf-8",
-    newline=""
-) as file:
-    file.write(calendar)
-
+    with open(
+        OUTPUT_FILE,
+        "w",
+        encoding="utf-8",
+        newline=""
+    ) as file:
+        file.write(calendar)
 
     print(
         f"Calendar written to: {OUTPUT_FILE}"

@@ -179,18 +179,18 @@ def filter_events(events):
 
 def build_calendar(events):
 
-lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Aberdeen FC//Fixtures//EN",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "X-WR-CALNAME:Aberdeen FC Fixtures",
-    "X-WR-CALDESC:Aberdeen FC fixtures updated daily",
-    "X-WR-TIMEZONE:UTC",
-    "X-PUBLISHED-TTL:PT24H",
-    "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
-]
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Aberdeen FC//Fixtures//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:Aberdeen FC Fixtures",
+        "X-WR-CALDESC:Aberdeen FC fixtures updated daily",
+        "X-WR-TIMEZONE:UTC",
+        "X-PUBLISHED-TTL:PT24H",
+        "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
+    ]
     
     for event in events:
 

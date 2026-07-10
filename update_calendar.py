@@ -191,7 +191,7 @@ def build_calendar(events):
         "X-PUBLISHED-TTL:PT24H",
         "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
     ]
-    
+
     for event in events:
 
         summary = classify_fixture(
@@ -203,53 +203,42 @@ def build_calendar(events):
 
         dtstart = event["DTSTART"]
 
-        start_dt = parse_datetime(
-            dtstart
-        )
+        start_dt = parse_datetime(dtstart)
 
         if start_dt:
-
-            end_dt = (
-                start_dt
-                + timedelta(hours=2)
-            )
+            end_dt = start_dt + timedelta(hours=2)
 
             dtend = end_dt.strftime(
                 "%Y%m%dT%H%M%SZ"
             )
-
         else:
             dtend = dtstart
 
         uid = event.get("UID")
 
         if not uid:
-
             uid = (
                 f"{dtstart}-"
                 f"{summary.replace(' ', '')}"
                 "@aberdeenfc"
             )
 
-        lines.extend(
-            [
-                "BEGIN:VEVENT",
-                f"UID:{uid}",
-                f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
-                f"DTSTART:{dtstart}",
-                f"DTEND:{dtend}",
-                f"SUMMARY:{ics_escape(summary)}",
-                f"LOCATION:{ics_escape(event.get('LOCATION', ''))}",
-                f"DESCRIPTION:{ics_escape(event.get('DESCRIPTION', 'Aberdeen FC Fixture'))}",
-                "STATUS:CONFIRMED",
-                "END:VEVENT"
-            ]
-        )
+        lines.extend([
+            "BEGIN:VEVENT",
+            f"UID:{uid}",
+            f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
+            f"DTSTART:{dtstart}",
+            f"DTEND:{dtend}",
+            f"SUMMARY:{ics_escape(summary)}",
+            f"LOCATION:{ics_escape(event.get('LOCATION', ''))}",
+            f"DESCRIPTION:{ics_escape(event.get('DESCRIPTION', 'Aberdeen FC Fixture'))}",
+            "STATUS:CONFIRMED",
+            "END:VEVENT"
+        ])
 
-lines.append("END:VCALENDAR")
+    lines.append("END:VCALENDAR")
 
-# RFC5545 requires CRLF line endings
-return "\r\n".join(lines) + "\r\n"
+    return "\r\n".join(lines) + "\r\n"
 
 
 def main():
@@ -271,6 +260,7 @@ def main():
 
     calendar = build_calendar(events)
 
+
 with open(
     OUTPUT_FILE,
     "w",
@@ -278,6 +268,7 @@ with open(
     newline=""
 ) as file:
     file.write(calendar)
+
 
     print(
         f"Calendar written to: {OUTPUT_FILE}"

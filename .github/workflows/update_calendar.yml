@@ -46,7 +46,7 @@ jobs:
 
       - name: Verify calendar file exists
         run: |
-          if [ ! -f "aberdeen_fc_ops_calendar.ics" ]; then
+          if [ ! -f "aberdeen_fc_fixtures.ics" ]; then
             echo "Calendar file not created"
             exit 1
           fi
@@ -66,9 +66,9 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "action@github.com"
 
-         git add aberdeen_fc_fixtures.ics
+          git add aberdeen_fc_fixtures.ics
 
-          git commit -m "Update Aberdeen FC calendar $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          git commit -m "Update Aberdeen FC calendar $(date -u '+%Y-%m-%d %H:%M:%S UTC')" || exit 0
 
           git push
 
@@ -77,9 +77,9 @@ jobs:
           echo "## Aberdeen FC Calendar Update" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          COUNT=$(grep -c "BEGIN:VEVENT" aberdeen_fc_ops_calendar.ics || echo 0)
+          COUNT=$(grep -c "BEGIN:VEVENT" aberdeen_fc_fixtures.ics || echo 0)
 
           echo "Fixtures generated: $COUNT" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Calendar URL:" >> $GITHUB_STEP_SUMMARY
-          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/aberdeen_fc_ops_calendar.ics" >> $GITHUB_STEP_SUMMARY
+          echo "https://raw.githubusercontent.com/${{ github.repository }}/main/aberdeen_fc_fixtures.ics" >> $GITHUB_STEP_SUMMARY

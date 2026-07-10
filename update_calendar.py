@@ -6,8 +6,6 @@ OUTPUT_FILE = "aberdeen_fc_fixtures.ics"
 
 
 def ics_escape(text):
-    """Escape special characters according to RFC5545."""
-
     if not text:
         return ""
 
@@ -22,7 +20,6 @@ def ics_escape(text):
 
 
 def parse_datetime(dt_string):
-    """Parse common ICS date formats."""
 
     if not dt_string:
         return None
@@ -37,24 +34,14 @@ def parse_datetime(dt_string):
         try:
             return datetime.strptime(dt_string, fmt)
         except ValueError:
-            pass
+            continue
 
     return None
 
 
 def classify_fixture(summary):
-    """
-    Add HOME/AWAY indicators.
-
-    Supports:
-    Aberdeen - Rangers
-    Rangers - Aberdeen
-    Aberdeen v Rangers
-    Rangers v Aberdeen
-    """
 
     summary = summary.strip()
-
     lower = summary.lower()
 
     home = (
@@ -69,14 +56,15 @@ def classify_fixture(summary):
 
     competition = ""
 
-    cup_keywords = [
-        "cup",
-        "league cup",
-        "carabao",
-        "scottish cup"
-    ]
-
-    if any(word in lower for word in cup_keywords):
+    if any(
+        word in lower
+        for word in [
+            "cup",
+            "league cup",
+            "carabao",
+            "scottish cup"
+        ]
+    ):
         competition = "CUP"
 
     elif "friendly" in lower:
@@ -85,18 +73,19 @@ def classify_fixture(summary):
     if home:
         if competition:
             return f"[HOME - {competition}] {summary}"
+
         return f"[HOME] {summary}"
 
     if away:
         if competition:
             return f"[AWAY - {competition}] {summary}"
+
         return f"[AWAY] {summary}"
 
     return summary
 
 
 def fetch_events():
-    """Download and parse ICS feed."""
 
     print(f"Downloading fixtures from {SOURCE_URL}")
 
@@ -131,10 +120,6 @@ def fetch_events():
 
         key, value = line.split(":", 1)
 
-        # Handle:
-        # DTSTART;TZID=Europe/London
-        # DTSTART;VALUE=DATE
-
         key = key.split(";")[0]
 
         current[key.strip()] = value.strip()
@@ -145,7 +130,6 @@ def fetch_events():
 
 
 def filter_events(events):
-    """Keep previous 30 days and next 12 months."""
 
     now = datetime.utcnow()
 
@@ -199,42 +183,52 @@ def build_calendar(events):
 
         dtstart = event["DTSTART"]
 
-        start_dt = parse_datetime(dtstart)
+        start_dt = parse_datetime(
+            dtstart
+        )
 
         if start_dt:
-            end_dt = start_dt + timedelta(hours=2)
+
+            end_dt = (
+                start_dt
+                + timedelta(hours=2)
+            )
 
             dtend = end_dt.strftime(
                 "%Y%m%dT%H%M%SZ"
             )
+
         else:
             dtend = dtstart
 
         uid = event.get("UID")
 
         if not uid:
+
             uid = (
                 f"{dtstart}-"
                 f"{summary.replace(' ', '')}"
                 "@aberdeenfc"
             )
 
-        lines.extend([
-            "BEGIN:VEVENT",
-            f"UID:{uid}",
-            f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
-            f"DTSTART:{dtstart}",
-            f"DTEND:{dtend}",
-            f"SUMMARY:{ics_escape(summary)}",
-            f"LOCATION:{ics_escape(event.get('LOCATION', ''))}",
-            f"DESCRIPTION:{ics_escape(event.get('DESCRIPTION', 'Aberdeen FC Fixture'))}",
-            "STATUS:CONFIRMED",
-            "END:VEVENT"
-        ])
+        lines.extend(
+            [
+                "BEGIN:VEVENT",
+                f"UID:{uid}",
+                f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
+                f"DTSTART:{dtstart}",
+                f"DTEND:{dtend}",
+                f"SUMMARY:{ics_escape(summary)}",
+                f"LOCATION:{ics_escape(event.get('LOCATION', ''))}",
+                f"DESCRIPTION:{ics_escape(event.get('DESCRIPTION', 'Aberdeen FC Fixture'))}",
+                "STATUS:CONFIRMED",
+                "END:VEVENT"
+            ]
+        )
 
     lines.append("END:VCALENDAR")
 
-    # RFC5545 requires CRLF line endings
+    # RFC5545-compliant line endings
     return "\r\n".join(lines) + "\r\n"
 
 

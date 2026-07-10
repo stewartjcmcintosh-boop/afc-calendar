@@ -179,18 +179,19 @@ def filter_events(events):
 
 def build_calendar(events):
 
-    lines = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//Aberdeen FC//Fixtures//EN",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "X-WR-CALNAME:Aberdeen FC Fixtures",
-        "X-WR-TIMEZONE:UTC",
-        "X-PUBLISHED-TTL:PT24H",
-        "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
-    ]
-
+lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Aberdeen FC//Fixtures//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:Aberdeen FC Fixtures",
+    "X-WR-CALDESC:Aberdeen FC fixtures updated daily",
+    "X-WR-TIMEZONE:UTC",
+    "X-PUBLISHED-TTL:PT24H",
+    "REFRESH-INTERVAL;VALUE=DURATION:PT24H"
+]
+    
     for event in events:
 
         summary = classify_fixture(
@@ -245,9 +246,10 @@ def build_calendar(events):
             ]
         )
 
-    lines.append("END:VCALENDAR")
+lines.append("END:VCALENDAR")
 
-    return "\n".join(lines)
+# RFC5545 requires CRLF line endings
+return "\r\n".join(lines) + "\r\n"
 
 
 def main():
@@ -269,12 +271,13 @@ def main():
 
     calendar = build_calendar(events)
 
-    with open(
-        OUTPUT_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
-        file.write(calendar)
+with open(
+    OUTPUT_FILE,
+    "w",
+    encoding="utf-8",
+    newline=""
+) as file:
+    file.write(calendar)
 
     print(
         f"Calendar written to: {OUTPUT_FILE}"
